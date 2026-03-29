@@ -1,0 +1,45 @@
+[project]
+name = "mmextend"
+version = "0.1.0"
+description = "Modular personal finance analysis pipeline for MMEX data"
+requires-python = ">=3.11"
+dependencies = [
+    "pandas>=2.0",
+    "pyarrow>=14.0",
+    "pydantic>=2.0",
+    "statsmodels>=0.14",
+    "chardet>=5.0",
+    "PyYAML>=6.0",
+    "matplotlib>=3.7",
+    "seaborn>=0.13",
+    "plotly>=5.18",
+    "jupyterlab>=4.0",
+    "ipykernel",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0",
+    "pytest-cov",
+    "ruff",
+]
+forecast = [
+    "prophet>=1.1",
+    "scikit-learn>=1.3",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

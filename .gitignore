@@ -205,3 +205,20 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# ── MMEX Financial data — NEVER commit ────────────────────────────────────────
+data/raw/
+data/interim/
+data/processed/
+outputs/
+*.mmb
+*.db
+*.sqlite
+*.sqlite3
+
+# Keep directory structure in git
+!data/raw/.gitkeep
+!data/interim/.gitkeep
+!data/processed/.gitkeep
+!outputs/.gitkeep
+!outputs/logs/.gitkeep

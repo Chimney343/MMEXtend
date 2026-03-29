@@ -1,0 +1,26 @@
+# Master pipeline configuration
+# Edit paths here if your project root is not the working directory.
+
+paths:
+  data_raw:       "data/raw"
+  data_interim:   "data/interim"
+  data_processed: "data/processed"
+  outputs:        "outputs"
+  logs:           "outputs/logs"
+
+logging:
+  level: "INFO"   # DEBUG | INFO | WARNING | ERROR | CRITICAL
+
+ingestion:
+  # Maximum acceptable null rate for date/amount before pipeline halts
+  critical_null_threshold: 0.02
+  # Date gap above this (days) triggers a WARNING
+  date_gap_warning_days: 14
+
+feature_engineering:
+  # Exclude transfers from expense aggregates to avoid double-counting
+  exclude_transfers: true
+
+feature_flags:
+  enable_gcp: false
+  enable_prophet_forecast: false   # requires the [forecast] extra

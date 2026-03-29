@@ -44,6 +44,15 @@
 - New files must start with appropriate imports (stdlib → third-party → local).
 - Every function needs type hints and a Google-style docstring.
 
+## Environment
+
+This project uses **Poetry** for all dependency and virtualenv management.
+- Lock file `poetry.lock` is committed and must stay up to date.
+- To install: `poetry install` (add `--with forecast` for Prophet/sklearn).
+- To add a dependency: `poetry add <pkg>` or `poetry add --group dev <pkg>`.
+- NEVER suggest `pip install` inside this project.
+- Run any command inside the environment with `poetry run <cmd>` or activate with `poetry shell`.
+
 ## Reference Files
 
 These files define project behaviour. Consult them as needed:

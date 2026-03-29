@@ -87,6 +87,29 @@ observations. State sample size (n months) next to every trend result.
 
 ---
 
+## Environment
+
+**The project uses [Poetry](https://python-poetry.org/) for all dependency and
+virtualenv management.** This is the single source of truth — do not use pip,
+conda, or any other tool to install packages inside this project.
+
+| Task | Command |
+|------|---------|
+| Install all dependencies | `poetry install` |
+| Install incl. forecast extras | `poetry install --with forecast` |
+| Add a runtime dependency | `poetry add <pkg>` |
+| Add a dev-only dependency | `poetry add --group dev <pkg>` |
+| Run a command in the environment | `poetry run <cmd>` |
+| Activate the virtualenv shell | `poetry shell` |
+| Update lock file | `poetry lock` |
+
+- `poetry.lock` is committed to version control. Always keep it in sync after
+  adding or removing dependencies.
+- NEVER call `pip install` directly inside this project.
+- NEVER generate `requirements.txt` — `pyproject.toml` + `poetry.lock` are canonical.
+
+---
+
 ## Coding Standards
 
 ### Python Style

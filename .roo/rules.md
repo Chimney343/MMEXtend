@@ -38,11 +38,18 @@
   - Logger calls using templates from `docs/03_LOGGING.md`
   - Confidence interval in return value (or explicit NaN + explanation)
 
+### Environment
+- The project uses **Poetry** for dependency and virtualenv management.
+- The lock file `poetry.lock` MUST be committed.
+- When adding a dependency, use `poetry add <pkg>` (or `poetry add --group dev <pkg>` for dev-only).
+- NEVER use `pip install` directly inside the project; always use Poetry.
+- The virtualenv is managed by Poetry; do not create or activate `.venv` manually.
+
 ### File Operations
 - NEVER create files in `data/raw/`. That directory is user-managed.
 - NEVER create CSV files in `outputs/` without the user explicitly requesting it.
 - When creating new source files, follow the naming convention in `docs/02_DIRECTORY_SETUP.md`.
-- When adding dependencies, add them to `pyproject.toml` and justify the addition.
+- When adding dependencies, add them to `pyproject.toml` via `poetry add` and justify the addition.
 
 ### Notebook Tasks
 - When asked to create or edit a notebook, follow the cell structure in

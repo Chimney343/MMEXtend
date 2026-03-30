@@ -3,6 +3,14 @@
 > **Primary instructions are in `../.ai-instructions.md` at the project root.**
 > Read that file first. Everything below supplements it for Roo-specific behaviour.
 
+## Codebase Memory
+
+Use codebase-memory-mcp first for structural code questions and repository-wide
+searches across indexed files. Prefer `search_graph`, `trace_call_path`,
+`query_graph`, and `search_code` over grep when you need cross-file context or
+function relationships. Fall back to file search or reads only when the index is
+unavailable or the question is limited to a single file.
+
 ## How Roo Should Use This Project
 
 1. **At the start of every task**, read `.ai-instructions.md` in the project root.
@@ -58,6 +66,13 @@
   - Markdown header above every code cell
   - `display(df)` not `print(df)`
   - Named variables for all figures and DataFrames
+
+### MMEX Database Schema
+- When any error or question involves the MMEX database structure (table names,
+  column names, foreign keys, polymorphic REFTYPE patterns), READ
+  `docs/schema/mmex_schema.md` FIRST before attempting a fix or explanation.
+- Only after applying the schema information and the problem still persists,
+  suggest that `docs/schema/mmex_schema.md` may be outdated (source: v21).
 
 ### Error Handling
 - If a task requires user input that hasn't been provided (opening balance,

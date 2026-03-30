@@ -3,6 +3,14 @@
 > **Primary instructions are in `../.ai-instructions.md` at the project root.**
 > Read that file first. Everything below supplements it for Copilot-specific behaviour.
 
+## Codebase Memory
+
+Use codebase-memory-mcp first when you need to understand relationships between
+functions or search across indexed files. Prefer `search_graph` and
+`trace_call_path` for structure, and `search_code` for repository-wide text
+search. Use ordinary file search or reads only when the memory index is not
+available or the task is limited to a single file.
+
 ## How Copilot Should Use This Project
 
 1. **Before generating code in any `src/` module**, read the corresponding doc in `docs/`.
@@ -53,18 +61,27 @@ This project uses **Poetry** for all dependency and virtualenv management.
 - NEVER suggest `pip install` inside this project.
 - Run any command inside the environment with `poetry run <cmd>` or activate with `poetry shell`.
 
+## MMEX Database Schema
+
+When any error or question relates to the MMEX `.mmb` file structure — table names,
+column names, foreign keys, or polymorphic `REFTYPE` relations — READ
+`docs/schema/mmex_schema.md` FIRST before writing or suggesting any fix.
+Only suggest that the file may be outdated (source: v21) if the issue persists
+after applying the information it contains.
+
 ## Reference Files
 
 These files define project behaviour. Consult them as needed:
 
 ```
-.ai-instructions.md          ← START HERE (shared rules, coding standards, module guide)
-docs/01_PROJECT_OVERVIEW.md  ← Architecture, build order, tech stack
-docs/02_DIRECTORY_SETUP.md   ← File naming, import paths
-docs/03_LOGGING.md           ← Log levels, mandatory events, templates
-docs/04_INGESTION.md         ← MMEX parsing, validation, schemas
-docs/05_STORAGE_GCP.md       ← Optional GCP setup
-docs/06_STORAGE_LOCAL.md     ← Parquet/CSV writing rules
+.ai-instructions.md           ← START HERE (shared rules, coding standards, module guide)
+docs/01_PROJECT_OVERVIEW.md   ← Architecture, build order, tech stack
+docs/02_DIRECTORY_SETUP.md    ← File naming, import paths
+docs/03_LOGGING.md            ← Log levels, mandatory events, templates
+docs/04_INGESTION.md          ← MMEX parsing, validation, schemas
+docs/05_STORAGE_GCP.md        ← Optional GCP setup
+docs/06_STORAGE_LOCAL.md      ← Parquet/CSV writing rules
 docs/07_NOTEBOOK_INTERVIEW.md ← Data inspection protocol
 docs/08_FINANCE_STATISTICS.md ← Statistical methods, implementation
+docs/schema/mmex_schema.md    ← MMEX SQLite schema (tables, columns, relations)
 ```

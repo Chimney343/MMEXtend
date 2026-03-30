@@ -5,7 +5,29 @@
 > in the project root. The agent-specific config files (`.github/copilot-instructions.md`
 > and `.roo/rules.md`) import this file by reference.
 
----
+## Codebase Memory (codebase-memory-mcp)
+
+For any structural code question or repository-wide search, use codebase-memory-mcp first.
+If the repository is not indexed yet, index it before searching. Prefer the graph
+and text-search tools from codebase-memory-mcp over grep when you need to understand
+how code relates across files.
+
+### When to use codebase-memory-mcp
+- "Who calls X?": `trace_call_path(function_name="X", direction="inbound")`
+- "What does X call?": `trace_call_path(function_name="X", direction="outbound")`
+- Find functions by pattern: `search_graph(label="Function", name_pattern=".*Pattern.*")`
+- Dead code: `search_graph(label="Function", relationship="CALLS", direction="inbound", max_degree=0, exclude_entry_points=true)`
+- Cross-service HTTP calls: `search_graph(relationship="HTTP_CALLS")`
+- REST routes: `search_graph(label="Route")`
+- Repository-wide text search inside indexed files: `search_code(pattern="...", regex=true|false, file_pattern="...")`
+- Understand structure first: `get_graph_schema` before writing complex queries
+- Read source after finding a function: `get_code_snippet(qualified_name="...")`
+- Complex multi-hop patterns: `query_graph` with Cypher syntax
+
+### When to use other tools instead
+- Single file reads — use the Read tool directly
+- Syntax or formatting questions
+- Repository text search only when the memory index is unavailable or the file type is unsupported
 
 ## Project Context
 
@@ -24,6 +46,14 @@ JupyterLab notebooks.
 | `src/utils/` | `docs/03_LOGGING.md` |
 | `notebooks/` | `docs/07_NOTEBOOK_INTERVIEW.md` |
 | Any module | `docs/01_PROJECT_OVERVIEW.md`, `docs/02_DIRECTORY_SETUP.md` |
+| MMEX DB errors / relations | `docs/schema/mmex_schema.md` |
+
+**MMEX schema rule:** Whenever there is an error related to the MMEX `.mmb`
+database (wrong table name, missing column, unexpected join result, REFTYPE
+behaviour), or the user asks to understand relations between MMEX tables,
+READ `docs/schema/mmex_schema.md` FIRST. Only after applying the schema
+information and the problem still persists, suggest that the file may be
+outdated (source: upstream v21).
 
 ---
 

@@ -4,6 +4,10 @@ End-to-end pipeline runner: parse → validate → feature-engineer → save.
 Usage:
     python scripts/run_pipeline.py --mmb path/to/file.mmb
     python scripts/run_pipeline.py --csv path/to/file.csv
+
+NBP exchange rates are fetched and cached automatically in
+  data/interim/rate_cache.json (override with --rate-cache or disable with
+  --no-rate-cache).
 """
 
 import argparse
@@ -32,11 +36,29 @@ def main() -> None:
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--mmb", type=str, help="Path to MMEX .mmb SQLite file")
     group.add_argument("--csv", type=str, help="Path to MMEX CSV export")
+    parser.add_argument(
+        "--rate-cache",
+        type=str,
+        default=str(PROJECT_ROOT / "data" / "interim" / "rate_cache.json"),
+        metavar="PATH",
+        help=(
+            "Path to the local JSON rate cache for NBP exchange rates. "
+            "Defaults to data/interim/rate_cache.json. "
+            "Live rates are fetched from api.nbp.pl for any uncached (currency, date) pair."
+        ),
+    )
+    parser.add_argument(
+        "--no-rate-cache",
+        action="store_true",
+        default=False,
+        help="Disable NBP rate fetching and use only the rates stored in the .mmb file.",
+    )
     args = parser.parse_args()
+    rate_cache = None if args.no_rate_cache else args.rate_cache
 
     # ── Step 1: Parse ─────────────────────────────────────────────────────────
     if args.mmb:
-        df = parse_mmex_sqlite(args.mmb)
+        df = parse_mmex_sqlite(args.mmb, rate_cache=rate_cache)
     else:
         df = parse_mmex_csv(args.csv)
 
@@ -67,7 +89,7 @@ def main() -> None:
     print("  transactions_featured.parquet")
     print("  monthly_aggregates.parquet")
     print("\nNext steps:")
-    print("  just lab   → open JupyterLab")
+    print("  just lab   -> open JupyterLab")
     print("  Open notebooks/00_data_quality.ipynb  to review validation")
     print("  Open notebooks/01_wrangle.ipynb       to explore features")
     print("=" * 60)

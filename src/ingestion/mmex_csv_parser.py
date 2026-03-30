@@ -18,26 +18,43 @@ logger = setup_logging(__name__)
 # Date formats to try in priority order
 DATE_FORMATS = ["%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%Y/%m/%d", "%d-%m-%Y"]
 
-# Column name normalisation map (MMEX exports vary by locale/version)
+# Column name normalisation map (MMEX exports vary by locale/version).
+# Includes both human-readable export headers and raw SQLite column names
+# (post-lowercasing) for files exported directly from the database.
 COLUMN_MAP: dict[str, str] = {
+    # date
     "transdate": "date",
     "trans_date": "date",
     "date": "date",
+    # account
     "account_name": "account",
     "account": "account",
+    # to-account (transfers)
     "toaccount": "to_account",
     "to_account": "to_account",
+    # payee
     "payee_name": "payee",
     "payee": "payee",
+    # category / subcategory
     "category_name": "category",
     "category": "category",
     "subcategory_name": "subcategory",
     "subcategory": "subcategory",
+    # amounts — raw SQLite names
     "amount": "amount",
-    "currency": "currency",
+    "transamount": "amount",
+    "totransamount": "to_amount",
+    # type / transcode
     "type": "type",
+    "transcode": "type",
+    # misc
+    "currency": "currency",
     "notes": "notes",
+    # transaction id
     "transid": "transaction_id",
+    # check/reference number
+    "transactionnumber": "transaction_number",
+    "transaction_number": "transaction_number",
 }
 
 

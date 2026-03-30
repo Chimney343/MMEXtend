@@ -44,7 +44,7 @@ class DataQualityReport:
         print("DATA QUALITY REPORT")
         print("=" * 60)
         print(f"  Rows loaded:        {self.rows_loaded}")
-        print(f"  Date range:         {self.date_min} → {self.date_max}")
+        print(f"  Date range:         {self.date_min} -> {self.date_max}")
         print(f"  Currencies:         {self.currencies_found}")
         print(
             f"  Uncategorised txns: {self.uncategorised_count}"

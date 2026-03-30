@@ -15,9 +15,11 @@ class TransactionRow(BaseModel):
     subcategory: Optional[str] = None
     payee: Optional[str] = None
     to_account: Optional[str] = None
+    to_amount: Optional[float] = None
     currency: Optional[str] = None
     notes: Optional[str] = None
     transaction_id: Optional[int] = None
+    transaction_number: Optional[str] = None
 
     @field_validator("account")
     @classmethod

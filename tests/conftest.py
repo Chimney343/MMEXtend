@@ -73,8 +73,11 @@ def null_amounts_df(sample_transactions: pd.DataFrame) -> pd.DataFrame:
 @pytest.fixture
 def tmp_mmb(tmp_path: "pytest.TempPathFactory") -> str:
     """
-    Write a minimal MMEX SQLite file to a temporary directory.
+    Write a minimal, schema-correct MMEX SQLite file to a temporary directory.
     Returns the absolute path as a string.
+
+    Schema matches MMEX v21 (tables.sql) so it is compatible with
+    parse_mmex_sqlite() and get_account_balances().
     """
     mmb_path = tmp_path / "test.mmb"
     conn = sqlite3.connect(str(mmb_path))
@@ -82,48 +85,62 @@ def tmp_mmb(tmp_path: "pytest.TempPathFactory") -> str:
 
     cursor.executescript("""
         CREATE TABLE CHECKINGACCOUNT_V1 (
-            TRANSID INTEGER PRIMARY KEY,
-            TRANSDATE TEXT,
-            ACCOUNTID INTEGER,
-            TOACCOUNTID INTEGER,
-            PAYEEID INTEGER,
-            CATEGID INTEGER,
-            SUBCATEGID INTEGER,
-            TRANSAMOUNT REAL,
-            TRANSCODE TEXT,
-            NOTES TEXT,
-            TOAMOUNT REAL
+            TRANSID           INTEGER PRIMARY KEY,
+            TRANSDATE         TEXT,
+            ACCOUNTID         INTEGER,
+            TOACCOUNTID       INTEGER,
+            PAYEEID           INTEGER,
+            CATEGID           INTEGER,
+            TRANSAMOUNT       REAL,
+            TRANSCODE         TEXT,
+            STATUS            TEXT,
+            DELETEDTIME       TEXT,
+            NOTES             TEXT,
+            TOTRANSAMOUNT     REAL,
+            TRANSACTIONNUMBER TEXT
         );
         CREATE TABLE ACCOUNTLIST_V1 (
-            ACCOUNTID INTEGER PRIMARY KEY,
+            ACCOUNTID   INTEGER PRIMARY KEY,
             ACCOUNTNAME TEXT,
-            CURRENCYID INTEGER,
-            STATUS TEXT,
-            INITIALBAL REAL
+            CURRENCYID  INTEGER,
+            STATUS      TEXT,
+            INITIALBAL  REAL
         );
         CREATE TABLE PAYEE_V1 (PAYEEID INTEGER PRIMARY KEY, PAYEENAME TEXT);
-        CREATE TABLE CATEGORY_V1 (CATEGID INTEGER PRIMARY KEY, CATEGNAME TEXT);
-        CREATE TABLE SUBCATEGORY_V1 (
-            SUBCATEGID INTEGER PRIMARY KEY,
-            SUBCATEGNAME TEXT,
-            CATEGID INTEGER
+        CREATE TABLE CATEGORY_V1 (
+            CATEGID  INTEGER PRIMARY KEY,
+            CATEGNAME TEXT,
+            PARENTID  INTEGER DEFAULT -1
+        );
+        CREATE TABLE SPLITTRANSACTIONS_V1 (
+            SPLITTRANSID      INTEGER PRIMARY KEY,
+            TRANSID           INTEGER,
+            CATEGID           INTEGER,
+            SPLITTRANSAMOUNT  REAL,
+            NOTES             TEXT
         );
         CREATE TABLE CURRENCYFORMATS_V1 (
-            CURRENCYID INTEGER PRIMARY KEY,
+            CURRENCYID      INTEGER PRIMARY KEY,
             CURRENCY_SYMBOL TEXT
         );
         CREATE TABLE INFOTABLE_V1 (INFONAME TEXT, INFOVALUE TEXT);
-
-        INSERT INTO ACCOUNTLIST_V1 VALUES (1, 'Checking', 1, 'Open', 0.0);
-        INSERT INTO PAYEE_V1 VALUES (1, 'Employer');
-        INSERT INTO CATEGORY_V1 VALUES (1, 'Income');
-        INSERT INTO SUBCATEGORY_V1 VALUES (1, 'Salary', 1);
-        INSERT INTO CURRENCYFORMATS_V1 VALUES (1, 'USD');
-
-        INSERT INTO CHECKINGACCOUNT_V1 VALUES
-            (1, '2024-01-01', 1, NULL, 1, 1, 1, 3000.0, 'Deposit', NULL, NULL),
-            (2, '2024-02-01', 1, NULL, 1, 1, 1, 3000.0, 'Deposit', NULL, NULL);
     """)
+
+    cursor.executemany("INSERT INTO ACCOUNTLIST_V1 VALUES (?,?,?,?,?)", [
+        (1, "Checking", 1, "Open", 0.0),
+    ])
+    cursor.execute("INSERT INTO PAYEE_V1 VALUES (1, 'Employer')")
+    cursor.execute("INSERT INTO CATEGORY_V1 VALUES (1, 'Income', -1)")
+    cursor.execute("INSERT INTO CURRENCYFORMATS_V1 VALUES (1, 'USD')")
+    cursor.execute("INSERT INTO INFOTABLE_V1 VALUES ('DATAVERSION', '3')")
+
+    cursor.executemany(
+        "INSERT INTO CHECKINGACCOUNT_V1 VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+        [
+            (1, "2024-01-01", 1, None, 1, 1, 3000.0, "Deposit",    None, None, None, None, None),
+            (2, "2024-02-01", 1, None, 1, 1, 3000.0, "Deposit",    None, None, None, None, None),
+        ],
+    )
     conn.commit()
     conn.close()
     return str(mmb_path)

@@ -8,6 +8,8 @@
 #   just install
 #   just test
 
+set windows-shell := ["powershell.exe", "-NoLogo", "-NoProfile", "-Command"]
+
 # Default: list available recipes
 default:
     @just --list
@@ -25,13 +27,14 @@ install-forecast:
 # ── Pipeline ──────────────────────────────────────────────────────────────────
 
 # Parse, validate and feature-engineer an MMEX .mmb file.
-# Writes parquet checkpoints to data/interim/.
-# Example: just run /home/user/finances.mmb
+# Fetches live NBP exchange rates automatically (cached in data/interim/rate_cache.json).
+# Pass --no-rate-cache to disable and use only the rates stored in the .mmb file.
+# Example: just run "C:\Users\mkkom\Mój dysk\PersonalFinance\MMEX\personal_finance.mmb"
 run mmb_path:
     poetry run python scripts/run_pipeline.py --mmb "{{mmb_path}}"
 
 # Same as `run` but for a CSV export.
-# Example: just run-csv data/raw/mmex_export_2025-03-29.csv
+# Example: just run-csv "data/raw/mmex_export_2025-03-29.csv"
 run-csv csv_path:
     poetry run python scripts/run_pipeline.py --csv "{{csv_path}}"
 

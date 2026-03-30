@@ -208,7 +208,7 @@ __marimo__/
 
 # ── MMEX Financial data — NEVER commit ────────────────────────────────────────
 data/raw/
-data/interim/
+data/interim/*
 data/processed/
 outputs/
 *.mmb
@@ -222,3 +222,6 @@ outputs/
 !data/processed/.gitkeep
 !outputs/.gitkeep
 !outputs/logs/.gitkeep
+
+# Rate cache is historical/immutable — commit it so fetches aren't repeated
+!data/interim/rate_cache.json

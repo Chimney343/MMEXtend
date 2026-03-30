@@ -21,6 +21,15 @@ feature_engineering:
   # Exclude transfers from expense aggregates to avoid double-counting
   exclude_transfers: true
 
+forecast:
+  # Categories excluded from all cashflow forecasts.
+  # Use this for one-off events that inflated historical spend and are
+  # unlikely to recur (e.g. wedding costs, one-time renovations).
+  # Values must match category names exactly as they appear in MMEX.
+  exclude_categories: []
+  #   - "Wedding"
+  #   - "Home Renovation"
+
 feature_flags:
   enable_gcp: false
   enable_prophet_forecast: false   # requires the [forecast] extra

@@ -1,0 +1,141 @@
+# Master pipeline configuration
+# Edit paths here if your project root is not the working directory.
+
+paths:
+  data_raw:       "data/raw"
+  data_interim:   "data/interim"
+  data_processed: "data/processed"
+  outputs:        "outputs"
+  logs:           "outputs/logs"
+
+logging:
+  level: "INFO"   # DEBUG | INFO | WARNING | ERROR | CRITICAL
+
+ingestion:
+  # Maximum acceptable null rate for date/amount before pipeline halts
+  critical_null_threshold: 0.02
+  # Date gap above this (days) triggers a WARNING
+  date_gap_warning_days: 14
+
+feature_engineering:
+  # Exclude transfers from expense aggregates to avoid double-counting
+  exclude_transfers: true
+
+cashflow:
+  # Positive rows in these categories are income; positive rows in any other
+  # category are refunds and reduce that month's withdrawals. Uncategorised
+  # rows fall back to their transaction type.
+  income_categories: ["Income"]
+
+forecast:
+  # Categories excluded from all cashflow forecasts.
+  # Use this for one-off events that inflated historical spend and are
+  # unlikely to recur (e.g. a house move, a one-time renovation).
+  # Values must match category names exactly as they appear in MMEX.
+  exclude_categories: []
+  #   - "Moving House"
+  #   - "Home Renovation"
+
+recurring:
+  # Recurring-commitment detection (src/analysis/recurring_commitments.py).
+  # A payee becomes a commitment when it appears in at least this many
+  # distinct months AND its trailing-window amount CV is at or below the
+  # threshold below.
+  min_distinct_months: 6
+  # A payee is "active" when its last payment is within this many days.
+  active_window_days: 90
+  # Maximum coefficient of variation (std / mean) of daily totals inside the
+  # trailing window. Lower = stricter (rent passes, groceries fail). A single
+  # large price step is tolerated by measuring within-regime variation.
+  amount_cv_threshold: 0.10
+  # A price change is flagged when the relative jump exceeds this fraction
+  # OR the absolute jump exceeds price_change_abs_pln below.
+  price_change_pct: 0.05
+  price_change_abs_pln: 5.0
+  # Trailing window (months) used for run-rate, CV and the modal amount.
+  run_rate_window_months: 12
+  # Ignore individual withdrawal rows below this absolute PLN amount.
+  min_amount_pln: 0.0
+  # Category summary: a category is "steady" when its monthly spend CV (over
+  # complete months) is at or below this threshold. Category totals are noisier
+  # than a single payee, so this is deliberately looser than amount_cv_threshold.
+  category_cv_threshold: 0.25
+
+chat:
+  # AI Advisor drawer (dashboard/chat.py, src/agent/).
+  model: deepseek-flash            # env DEEPSEEK_MODEL overrides
+  # Thinking mode is not supported yet: it requires round-tripping
+  # reasoning_content on every tool-call turn. Setting this true raises a
+  # clear error at startup instead of failing mid-chat.
+  thinking: false
+  temperature: 0.3
+  max_tool_iterations: 8
+  max_rows: 200                    # rows returned to the model per query
+  max_result_chars: 12000          # hard cap on serialised tool output
+  history_turns: 20                # user/assistant turns kept in context
+  request_timeout_s: 90
+  # Optional local skill folder; it is not part of the repository and the
+  # advisor runs without it when the folder is missing.
+  skill_dir: .agents/skills/i-will-teach-you-to-be-rich
+  include_mmex_tables: true
+
+budget_health:
+  # Conscious Spending Plan view (src/analysis/budget_health.py, dashboard tab
+  # "Budget Health"). Bucket targets are Ramit Sethi's, from I Will Teach You
+  # to Be Rich (2nd ed.) — reference ranges, not norms derived from this data.
+  #
+  # Set to true once the bucket and account mappings (in
+  # configs/pipeline.local.yaml) match your data. The dashboard shows a
+  # warning while it is false.
+  mapping_confirmed: false
+  base_currency: PLN
+  income_categories: ["Income"]
+  # Subtracted from gross income to get take-home pay, e.g. VAT, income tax
+  # and social contributions when invoices are booked gross.
+  take_home_deductions: ["Taxes"]
+  targets:                         # share of take-home pay: [low, high]
+    fixed: [0.50, 0.60]
+    investments: [0.10, 0.10]
+    savings: [0.05, 0.10]
+    guilt_free: [0.20, 0.35]
+  emergency_fund_months: [3, 6]    # of fixed costs, held in the savings group
+
+  # Your Conscious Spending Plan amounts. null = not tracked yet; the Money
+  # Flow adherence section shows an info alert until they are set.
+  employer_match: false            # true = an employer pension match exists (not visible in MMEX)
+  plan:
+    salary_pln: null               # fixed monthly transfer reserve → spending accounts
+    salary_day: null               # day of month (1-31) the salary transfer should happen
+    investment_pln: null           # monthly amount you intend to invest
+
+  # Category → bucket: fixed | guilt_free | one_off.
+  # "Category|Subcategory" keys win over "Category" keys. Anything not listed
+  # is reported as "unmapped". Savings and investments are not categories:
+  # they are measured as net inflows into the account groups below.
+  # Put your real mapping in configs/pipeline.local.yaml. Examples:
+  #   Rent: fixed
+  #   Groceries: fixed
+  #   Dining Out: guilt_free
+  #   Transportation|Taxi: guilt_free
+  #   Home Renovation: one_off
+  buckets: {}
+
+  # Account → group: cash | savings | investments | receivables | debt | other.
+  # Unlisted accounts use their MMEX type: Checking/Cash → cash,
+  # Credit Card/Loan → debt, Investment/Shares → investments, Term/Asset → other.
+  # The names below are examples. Put your real account names in
+  # configs/pipeline.local.yaml (git-ignored); load_config() merges it over
+  # this file, and its lists replace these.
+  account_groups:
+    savings:
+      - Savings Account
+    investments:
+      - Brokerage
+    receivables:                   # people and deposits: money owed to you
+      - Frozen
+      - Frozen [EUR]
+      - Frozen [GBP]
+
+feature_flags:
+  enable_gcp: false
+  enable_prophet_forecast: false   # requires the [forecast] extra

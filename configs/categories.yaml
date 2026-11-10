@@ -1,0 +1,18 @@
+# Category mapping: fixed vs variable expenses.
+# Populate after reviewing your first DataQualityReport.
+# Rules:
+#   - Keys must match MMEX category names exactly (case-sensitive).
+#   - type: fixed   → recurring, predictable (rent, insurance, subscriptions)
+#   - type: variable → discretionary or irregular (groceries, dining, travel)
+#   - Leave unknown categories absent; the pipeline will surface them.
+
+# Example entries (replace with your actual MMEX categories):
+# Food & Dining:
+#   type: variable
+# Rent:
+#   type: fixed
+# Utilities:
+#   type: fixed
+# Entertainment:
+#   type: variable
+categories: {}

@@ -376,6 +376,27 @@ def test_get_advisor_returns_none_without_api_key(monkeypatch):
     assert get_advisor() is None
 
 
+def test_get_advisor_runs_without_the_optional_skill(monkeypatch, caplog):
+    import src.agent.advisor as advisor_module
+
+    monkeypatch.setenv("DEEPSEEK_API_KEY", "test-key")
+    monkeypatch.delenv("MMB_PATH", raising=False)
+    monkeypatch.setattr(
+        advisor_module, "load_config", lambda: {"chat": {"skill_dir": "no/such/skill"}}
+    )
+    monkeypatch.setattr(advisor_module, "SqlSandbox", lambda **_kwargs: object())
+    reset_advisor()
+    try:
+        advisor = get_advisor()
+    finally:
+        reset_advisor()
+
+    assert advisor is not None
+    assert advisor.skill.name == "none"
+    assert advisor.skill.references == {}
+    assert any("skill not found" in record.message for record in caplog.records)
+
+
 def test_describe_table_includes_columns_and_sample():
     sandbox = _FakeSandbox(
         result=QueryResult(columns=["ACCOUNTNAME"], rows_csv="ACCOUNTNAME\r\nChecking\r\n"),

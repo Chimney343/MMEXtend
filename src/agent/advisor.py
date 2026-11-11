@@ -220,6 +220,12 @@ def build_system_prompt(
                 "(0.4 = 40%)."
             ),
             (
+                "- `cashflow_forecast` is a flat forecast at the trailing 12-month "
+                "average: its `method` column reads '12-month average' and the point "
+                "estimate is the same for every future month. Do not describe it as a "
+                "trend, seasonal model or Prophet."
+            ),
+            (
                 "- `year_month` is VARCHAR 'YYYY-MM': compare it as a string, or use "
                 "the `date` column for date arithmetic. Never cast `year_month` to DATE."
             ),
@@ -242,7 +248,7 @@ def build_system_prompt(
                 "so plainly when `cum_point` lies outside `cum_ci80_*`. "
                 "`forecast_backtest` holds the per-origin, per-horizon errors used to "
                 "estimate those bands (columns `actual`, `point`, `cum_actual`, "
-                "`cum_point`, `forecaster`)."
+                "`cum_point`, `forecaster`, always 'shipped')."
             ),
             (
                 "- `expense_trends`: `trend_pvalue` is a Newey-West (HAC) p-value; "

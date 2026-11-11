@@ -392,7 +392,7 @@ def plot_category_forecast(
     title: str = "Category Forecast",
     horizon_months: int | None = None,
 ) -> go.Figure:
-    """Monthly amount bars plus a Prophet forecast line and CI ribbons.
+    """Monthly amount bars plus a category forecast line and CI ribbons.
 
     Parameters
     ----------
@@ -450,7 +450,7 @@ def plot_category_forecast(
                 )
             )
 
-        method = forecast_df["method"].iloc[0] if "method" in forecast_df.columns else "Prophet"
+        method = forecast_df["method"].iloc[0] if "method" in forecast_df.columns else "forecast"
         fig.add_trace(
             go.Scatter(
                 x=fc_months,

@@ -16,12 +16,12 @@ reference rates, not results, so it is not cleared between runs.
 """
 
 import argparse
+import io
 import os
 import sys
 from datetime import date
 from pathlib import Path
 
-import pandas as pd
 from dotenv import load_dotenv
 
 # Ensure the project root is on sys.path so `src` is importable
@@ -44,7 +44,6 @@ from src.analysis.feature_engineering import (
 from src.analysis.forecast_backtest import (
     MIN_ORIGINS_FOR_BANDS,
     empirical_bands,
-    naive_mean_forecaster,
     rolling_origin_backtest,
     summarise_backtest,
 )
@@ -68,7 +67,27 @@ logger = setup_logging("run_pipeline")
 PROJECT_ROOT = Path(__file__).parents[1]
 
 
+def _utf8_console() -> None:
+    """
+    Make stdout/stderr survive characters the console codepage cannot encode.
+
+    A default Windows console uses cp1250 (or another legacy codepage), where
+    characters such as an arrow raise UnicodeEncodeError and abort the run.
+    Reconfiguring to UTF-8 with ``errors="replace"`` keeps every log line
+    printable; on an already-UTF-8 stream it is a no-op.
+    """
+    for stream in (sys.stdout, sys.stderr):
+        reconfigure = getattr(stream, "reconfigure", None)
+        if reconfigure is None:
+            continue
+        try:
+            reconfigure(encoding="utf-8", errors="replace")
+        except (ValueError, OSError, io.UnsupportedOperation):
+            pass
+
+
 def main() -> None:
+    _utf8_console()
     load_dotenv(PROJECT_ROOT / ".env")
 
     parser = argparse.ArgumentParser(
@@ -220,32 +239,28 @@ def main() -> None:
             len(cashflow_series),
         )
     else:
-        prophet_bt = rolling_origin_backtest(cashflow_series, select_and_run_forecast)
-        naive_bt = rolling_origin_backtest(cashflow_series, naive_mean_forecaster)
-        prophet_bt = prophet_bt.assign(forecaster="prophet")
-        naive_bt = naive_bt.assign(forecaster="naive_mean")
-        backtest = pd.concat([prophet_bt, naive_bt], ignore_index=True)
+        # The shipped forecaster IS the trailing-average baseline, so replaying
+        # a separate naive arm would just duplicate it. The backtest exists to
+        # estimate the bands and report the error, nothing else.
+        backtest = rolling_origin_backtest(cashflow_series, select_and_run_forecast)
+        backtest = backtest.assign(forecaster="shipped")
         writer.save_processed(backtest, "forecast_backtest")
 
-        prophet_summary = summarise_backtest(prophet_bt)
-        naive_summary = summarise_backtest(naive_bt)
+        summary = summarise_backtest(backtest)
         logger.info(
-            "Backtest (%d origins): Prophet MAE/month %.0f vs naive %.0f | "
-            "12-mo |cum err| %.0f vs %.0f | Prophet model-band coverage %.2f | "
-            "holdout cumulative 80%% band %d/%d",
-            prophet_summary["n_origins"],
-            prophet_summary["mae_month"],
-            naive_summary["mae_month"],
-            prophet_summary["abs_cum_err_12"],
-            naive_summary["abs_cum_err_12"],
-            prophet_summary["model_ci80_coverage_month"],
-            prophet_summary["holdout_cum80_k"],
-            prophet_summary["holdout_cum80_m"],
+            "Backtest (%d origins): MAE/month %.0f | 12-mo |cum err| %.0f | "
+            "model-band coverage %.2f | holdout cumulative 80%% band %d/%d",
+            summary["n_origins"],
+            summary["mae_month"],
+            summary["abs_cum_err_12"],
+            summary["model_ci80_coverage_month"],
+            summary["holdout_cum80_k"],
+            summary["holdout_cum80_m"],
         )
 
-        n_origins = int(prophet_bt["origin_month"].nunique())
+        n_origins = int(backtest["origin_month"].nunique())
         if n_origins >= MIN_ORIGINS_FOR_BANDS:
-            forecast_df = empirical_bands(prophet_bt, forecast_df)
+            forecast_df = empirical_bands(backtest, forecast_df)
     writer.save_processed(forecast_df, "cashflow_forecast")
 
     # ── Step 9: Category trends ───────────────────────────────────────────────

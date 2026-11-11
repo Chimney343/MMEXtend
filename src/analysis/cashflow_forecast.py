@@ -2,7 +2,7 @@
 Cash flow forecasting using method selection by data length.
 
 Selects the appropriate method automatically:
-  >= 24 months → Prophet (with 80% and 95% CIs)
+  >= 24 months → trailing 12-month average (flat forecast, backtest-derived bands)
   12–23 months → Holt-Winters Exponential Smoothing (bootstrapped CIs)
   < 12 months  → 3-month rolling mean (no CI, indicative only)
 
@@ -277,6 +277,81 @@ def forecast_rolling_mean(
     )
 
 
+def forecast_trailing_mean(
+    monthly_values: pd.Series,
+    periods: int = 12,
+    window: int = 12,
+    n_bootstrap: int = 500,
+) -> pd.DataFrame:
+    """
+    Flat forecast at the trailing ``window``-month mean.
+
+    This is the shipped method for long histories. The point forecast comes
+    from ``trailing_mean``, shared with the backtest baseline, so the shipped
+    forecast and the baseline cannot diverge.
+
+    Intervals are a residual bootstrap around the flat level: the spread of
+    the residuals is the only uncertainty the method has. They are the model's
+    own intervals and are replaced by backtest-derived bands once the pipeline
+    has enough rolling origins to estimate them.
+
+    Parameters
+    ----------
+    monthly_values : pd.Series
+        Monthly net cash flow with DatetimeIndex.
+    periods : int
+        Months ahead to forecast.
+    window : int
+        Trailing window length in months.
+    n_bootstrap : int
+        Bootstrap draws for interval estimation.
+
+    Returns
+    -------
+    pd.DataFrame
+        Columns: month, point_estimate, ci80_lower, ci80_upper,
+        ci95_lower, ci95_upper, cum_point, cum_ci80_lower, cum_ci80_upper,
+        cum_ci95_lower, cum_ci95_upper, interval_method, method.
+    """
+    from src.analysis.forecast_backtest import trailing_mean
+
+    point = trailing_mean(monthly_values, window=window)
+    n = len(monthly_values)
+    used = monthly_values.iloc[-min(window, n) :].to_numpy(dtype=float)
+    residuals = used - point
+
+    rng = np.random.default_rng(42)
+    simulations = np.zeros((n_bootstrap, periods))
+    for i in range(n_bootstrap):
+        noise = rng.choice(residuals, size=periods, replace=True)
+        simulations[i, :] = point + noise
+
+    future_dates = pd.date_range(
+        start=monthly_values.index[-1] + pd.DateOffset(months=1),
+        periods=periods,
+        freq="MS",
+    )
+    cumulative = np.cumsum(simulations, axis=1)
+
+    return pd.DataFrame(
+        {
+            "month": future_dates,
+            "point_estimate": np.full(periods, point),
+            "ci80_lower": np.percentile(simulations, 10, axis=0),
+            "ci80_upper": np.percentile(simulations, 90, axis=0),
+            "ci95_lower": np.percentile(simulations, 2.5, axis=0),
+            "ci95_upper": np.percentile(simulations, 97.5, axis=0),
+            "cum_point": np.cumsum(np.full(periods, point)),
+            "cum_ci80_lower": np.percentile(cumulative, 10, axis=0),
+            "cum_ci80_upper": np.percentile(cumulative, 90, axis=0),
+            "cum_ci95_lower": np.percentile(cumulative, 2.5, axis=0),
+            "cum_ci95_upper": np.percentile(cumulative, 97.5, axis=0),
+            "interval_method": "model",
+            "method": f"{window}-month average",
+        }
+    )
+
+
 # ── Method selector ───────────────────────────────────────────────────────────
 
 
@@ -288,9 +363,15 @@ def select_and_run_forecast(
     Select and run the appropriate forecast method based on data length.
 
     Selection logic:
-      >= 24 months → Prophet
+      >= 24 months → trailing 12-month average (flat forecast)
       12–23 months → Holt-Winters
       < 12 months  → rolling mean (no CI; indicative only)
+
+    The >= 24-month branch uses the flat trailing average because a
+    rolling-origin backtest on this series found no method that beat it, and
+    it was the incumbent baseline rather than a fitted model. Holt-Winters
+    remains for medium histories, where the average has too few observations
+    to be stable.
 
     Parameters
     ----------
@@ -308,14 +389,8 @@ def select_and_run_forecast(
     n = len(monthly_net_cashflow)
 
     if n >= 24:
-        logger.info(f"Forecast method: Prophet ({n} months of history)")
-        prophet_df = pd.DataFrame(
-            {
-                "ds": monthly_net_cashflow.index,
-                "y": monthly_net_cashflow.values,
-            }
-        )
-        return forecast_prophet(prophet_df, periods=periods)
+        logger.info(f"Forecast method: trailing 12-month average ({n} months of history)")
+        return forecast_trailing_mean(monthly_net_cashflow, periods=periods)
     elif n >= 12:
         logger.info(f"Forecast method: Holt-Winters ({n} months of history)")
         return forecast_holtwinters(monthly_net_cashflow, periods=periods)

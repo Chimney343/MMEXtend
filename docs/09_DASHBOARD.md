@@ -494,12 +494,15 @@ Reads `data/processed/expense_trends.parquet`,
 The month containing the run date is excluded from every fit and average; it
 is still reported as an actual.
 
-Forecast tab notes: `cashflow_forecast.parquet` carries `cum_ci80_lower` /
-`cum_ci80_upper`, the cumulative quantiles computed per simulated path. The
-savings fan uses those and never sums the monthly 80% columns. Its label says
-either `80% band (N backtests)` when `interval_method = empirical_backtest_nN`
-or `80% band (model, uncalibrated)` otherwise; with no cumulative columns at
-all it draws the point line and a "re-run `just run`" note. The 95% bands
+Forecast tab notes: the savings line is a flat forecast at the trailing
+12-month average, so the badge reads `Method: 12-month average` (the `method`
+column carries that label, not an internal id). `cashflow_forecast.parquet`
+carries `cum_ci80_lower` / `cum_ci80_upper`, the cumulative quantiles computed
+per simulated path. The savings fan uses those and never sums the monthly 80%
+columns. Its label says either `80% band (N backtests)` when
+`interval_method = empirical_backtest_nN` or `80% band (model, uncalibrated)`
+otherwise; with no cumulative columns at all it draws the point line and a
+"re-run `just run`" note. The 95% bands
 are blank: the backtest has too few origins to estimate 2.5/97.5 percentiles.
 With backtest bands, a grey subtitle gives `backtest_cum_low_k` of
 `backtest_cum_n` at the selected horizon ("the actual 24-month total came in

@@ -1488,7 +1488,7 @@ def _build_cat_forecast_figures(series_df, forecast_df, category, subcategory, f
         if selection is None or fc is None or fc.empty:
             figures.append(
                 make_empty_figure(
-                    "Insufficient history for Prophet forecast.",
+                    "Insufficient history for a category forecast.",
                     title=f"{base_title} ({horizon} months)",
                 )
             )

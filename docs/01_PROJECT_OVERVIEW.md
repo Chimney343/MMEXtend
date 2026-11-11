@@ -85,7 +85,7 @@ scripts/, dashboard/            ← all of src
 | Data | pandas, pyarrow | pandas >= 2.0 |
 | Validation | Pydantic | >= 2.0 |
 | Statistics | statsmodels | >= 0.14 |
-| Forecasting | Prophet | >= 1.1 |
+| Forecasting | statsmodels (cash flow), Prophet (category forecasts) | statsmodels >= 0.14, Prophet >= 1.1 |
 | ML utilities | scikit-learn | >= 1.3 |
 | Static plots | matplotlib, seaborn | latest stable |
 | Interactive plots | plotly | >= 5.18 |

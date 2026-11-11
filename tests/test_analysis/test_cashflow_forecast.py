@@ -180,27 +180,39 @@ class TestSelectAndRunForecast:
         result = select_and_run_forecast(_monthly_series(23), periods=3)
         assert (result["method"] == "Holt-Winters").all()
 
-    def test_24_months_uses_prophet(self):
-        """Prophet is called for >=24 months — mock to avoid heavy dependency."""
-        mock_result = pd.DataFrame(
-            {
-                "month": pd.date_range("2026-01-01", periods=3, freq="MS"),
-                "point_estimate": [1000.0, 1100.0, 1200.0],
-                "ci80_lower": [900.0, 950.0, 1000.0],
-                "ci80_upper": [1100.0, 1200.0, 1350.0],
-                "ci95_lower": [800.0, 850.0, 900.0],
-                "ci95_upper": [1200.0, 1300.0, 1450.0],
-                "method": ["Prophet"] * 3,
-            }
+    def test_24_months_uses_trailing_mean(self):
+        """The >= 24-month branch ships a flat trailing 12-month average."""
+        result = select_and_run_forecast(_monthly_series(24), periods=3)
+        assert (result["method"] == "12-month average").all()
+        # Flat: every future month equals the trailing mean.
+        assert result["point_estimate"].nunique() == 1
+        assert result["point_estimate"].iloc[0] == pytest.approx(1000.0)
+
+    def test_24_months_matches_naive_mean_point_forecast(self):
+        from src.analysis.forecast_backtest import naive_mean_forecaster
+
+        series = _rising_series(30)
+        shipped = select_and_run_forecast(series, periods=6)
+        baseline = naive_mean_forecaster(series, 6)
+        pd.testing.assert_series_equal(
+            shipped["point_estimate"].reset_index(drop=True),
+            baseline["point_estimate"].reset_index(drop=True),
+            check_names=False,
         )
+
+    def test_24_months_has_intervals(self):
+        """The flat forecast still carries an interval, so the fan is never blank."""
+        result = select_and_run_forecast(_monthly_series(24), periods=3)
+        for col in CI_COLS:
+            assert result[col].notna().all(), f"{col} should be populated"
+        assert (result["interval_method"] == "model").all()
+
+    def test_24_months_does_not_call_prophet(self):
         with patch(
             "src.analysis.cashflow_forecast.forecast_prophet",
-            return_value=mock_result,
         ) as mock_prophet:
-            result = select_and_run_forecast(_monthly_series(24), periods=3)
-            mock_prophet.assert_called_once()
-
-        assert (result["method"] == "Prophet").all()
+            select_and_run_forecast(_monthly_series(24), periods=3)
+            mock_prophet.assert_not_called()
 
     def test_returns_dataframe_with_required_columns(self):
         result = select_and_run_forecast(_monthly_series(15), periods=3)

@@ -59,7 +59,7 @@ class DataQualityReport:
         if self.date_gaps:
             print("\n  Date gaps > 14 days:")
             for start, end, days in self.date_gaps:
-                print(f"    {start} → {end} ({days} days)")
+                print(f"    {start} -> {end} ({days} days)")
         if self.critical_failures:
             print("\n  *** CRITICAL FAILURES (pipeline halted):")
             for failure in self.critical_failures:

@@ -1,0 +1,526 @@
+meta:
+  experiment: savings-forecast-bakeoff
+  plan: private/plans/savings-forecast-bakeoff.md
+  started: '2026-11-10'
+  output_dir: private/experiments/savings_forecast/2026-11-10
+  frozen: true
+  frozen_at: '2026-11-10T22:17:32Z'
+  config_sha256: null
+data:
+  cashflow_split: data/interim/monthly_cashflow_split.parquet
+  series_builder: complete_cashflow_series
+split:
+  initial: 36
+  step: 1
+  horizon_primary: 12
+  horizon_secondary: 24
+  test_fraction: 0.3333333333333333
+bands:
+  alpha: 0.2
+  min_origins: 10
+  pinball_taus:
+  - 0.1
+  - 0.9
+metrics:
+  mase_season: 12
+  primary_metric: RelCum12
+decision:
+  relcum12_max: 1.0
+  parsimony_margin: 0.1
+  mase_margin: 0.05
+  band_coverage:
+  - 0.65
+  - 0.95
+  baselines:
+    denominator: naive_mean_12
+    bias_reference: naive_mean_12
+  complexity_order:
+  - - naive_mean_12
+  - - naive_median_12
+  - - random_walk
+  - - seasonal_naive
+  - - drift
+  - - auto_ets
+    - theta
+  - - auto_arima
+    - holt_winters_shipped
+  - - combo_classical
+  - - decomposed_bu
+  - - decomposed_mint
+  - - ridge_direct
+  - - prophet_shipped
+  - - lgbm_direct
+cost:
+  warn_seconds_per_arm: 600
+arms:
+  naive_mean_12:
+    variants:
+    - {}
+  naive_median_12:
+    variants:
+    - {}
+  random_walk:
+    variants:
+    - {}
+  seasonal_naive:
+    variants:
+    - {}
+  drift:
+    windowed: true
+    variants:
+    - window: null
+    - window: 60
+    - window: 48
+    - window: 36
+  prophet_shipped:
+    variants:
+    - {}
+  auto_ets:
+    windowed: true
+    variants:
+    - window: null
+    - window: 60
+    - window: 48
+    - window: 36
+  auto_arima:
+    windowed: true
+    variants:
+    - window: null
+    - window: 60
+    - window: 48
+    - window: 36
+  theta:
+    windowed: true
+    variants:
+    - window: null
+    - window: 60
+    - window: 48
+    - window: 36
+  holt_winters_shipped:
+    variants:
+    - {}
+  decomposed_bu:
+    windowed: true
+    variants:
+    - window: null
+      dep_log: false
+      wd_log: false
+    - window: null
+      dep_log: true
+      wd_log: false
+    - window: null
+      dep_log: false
+      wd_log: true
+    - window: null
+      dep_log: true
+      wd_log: true
+    - window: 60
+      dep_log: false
+      wd_log: false
+    - window: 60
+      dep_log: true
+      wd_log: false
+    - window: 60
+      dep_log: false
+      wd_log: true
+    - window: 60
+      dep_log: true
+      wd_log: true
+    - window: 48
+      dep_log: false
+      wd_log: false
+    - window: 48
+      dep_log: true
+      wd_log: false
+    - window: 48
+      dep_log: false
+      wd_log: true
+    - window: 48
+      dep_log: true
+      wd_log: true
+    - window: 36
+      dep_log: false
+      wd_log: false
+    - window: 36
+      dep_log: true
+      wd_log: false
+    - window: 36
+      dep_log: false
+      wd_log: true
+    - window: 36
+      dep_log: true
+      wd_log: true
+  decomposed_mint:
+    windowed: true
+    variants:
+    - window: null
+    - window: 60
+    - window: 48
+    - window: 36
+  ridge_direct:
+    grid: true
+    variants:
+    - alpha: 0.1
+      fourier_k: 0
+      scale: false
+    - alpha: 0.1
+      fourier_k: 1
+      scale: false
+    - alpha: 0.1
+      fourier_k: 2
+      scale: false
+    - alpha: 0.1
+      fourier_k: 0
+      scale: true
+    - alpha: 0.1
+      fourier_k: 1
+      scale: true
+    - alpha: 0.1
+      fourier_k: 2
+      scale: true
+    - alpha: 1.0
+      fourier_k: 0
+      scale: false
+    - alpha: 1.0
+      fourier_k: 1
+      scale: false
+    - alpha: 1.0
+      fourier_k: 2
+      scale: false
+    - alpha: 1.0
+      fourier_k: 0
+      scale: true
+    - alpha: 1.0
+      fourier_k: 1
+      scale: true
+    - alpha: 1.0
+      fourier_k: 2
+      scale: true
+    - alpha: 10.0
+      fourier_k: 0
+      scale: false
+    - alpha: 10.0
+      fourier_k: 1
+      scale: false
+    - alpha: 10.0
+      fourier_k: 2
+      scale: false
+    - alpha: 10.0
+      fourier_k: 0
+      scale: true
+    - alpha: 10.0
+      fourier_k: 1
+      scale: true
+    - alpha: 10.0
+      fourier_k: 2
+      scale: true
+    - alpha: 100.0
+      fourier_k: 0
+      scale: false
+    - alpha: 100.0
+      fourier_k: 1
+      scale: false
+    - alpha: 100.0
+      fourier_k: 2
+      scale: false
+    - alpha: 100.0
+      fourier_k: 0
+      scale: true
+    - alpha: 100.0
+      fourier_k: 1
+      scale: true
+    - alpha: 100.0
+      fourier_k: 2
+      scale: true
+  lgbm_direct:
+    grid: true
+    variants:
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 0
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 1
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 2
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 0
+      scale: true
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 1
+      scale: true
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 2
+      scale: true
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 0
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 1
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 2
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 0
+      scale: true
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 1
+      scale: true
+    - num_leaves: 4
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 2
+      scale: true
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 0
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 1
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 2
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 0
+      scale: true
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 1
+      scale: true
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 2
+      scale: true
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 0
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 1
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 2
+      scale: false
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 0
+      scale: true
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 1
+      scale: true
+    - num_leaves: 4
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 2
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 0
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 1
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 2
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 0
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 1
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 100
+      fourier_k: 2
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 0
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 1
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 2
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 0
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 1
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 5
+      n_estimators: 300
+      fourier_k: 2
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 0
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 1
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 2
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 0
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 1
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 100
+      fourier_k: 2
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 0
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 1
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 2
+      scale: false
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 0
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 1
+      scale: true
+    - num_leaves: 8
+      min_data_in_leaf: 10
+      n_estimators: 300
+      fourier_k: 2
+      scale: true
+  combo_classical:
+    variants:
+    - {}
+robust_target:
+  enabled: true
+  candidates_from:
+  - naive_mean_12
+  - naive_median_12
+  - random_walk
+  - seasonal_naive
+  - prophet_shipped
+  - holt_winters_shipped
+  top_n: 3
+selection:
+  naive_mean_12: {}
+  naive_median_12: {}
+  random_walk: {}
+  seasonal_naive: {}
+  drift:
+    window: 60
+  prophet_shipped: {}
+  auto_ets:
+    window: 36
+  auto_arima:
+    window: 60
+  theta:
+    window: 36
+  holt_winters_shipped: {}
+  decomposed_bu:
+    window: 36
+    dep_log: false
+    wd_log: false
+  decomposed_mint:
+    window: 36
+  ridge_direct:
+    alpha: 100.0
+    fourier_k: 0
+    scale: false
+  lgbm_direct:
+    num_leaves: 4
+    min_data_in_leaf: 5
+    n_estimators: 100
+    fourier_k: 0
+    scale: false
+  combo_classical:
+    combo_windows:
+      auto_ets: 36
+      auto_arima: 60
+      theta: 36

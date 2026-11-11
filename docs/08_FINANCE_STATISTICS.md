@@ -74,7 +74,7 @@ p_raw = month_of_year_kruskal(residuals)   # DatetimeIndex, month-start
 
 | History Available | Method | Interval Approach |
 |-------------------|--------|-------------------|
-| >= 24 months | **Prophet** | Backtest-derived bands once >= 10 rolling origins exist; otherwise the model's own intervals, labelled uncalibrated |
+| >= 24 months | **Trailing 12-month average** | Residual-bootstrap band, replaced by backtest-derived bands once >= 10 rolling origins exist |
 | 12–23 months | **Holt-Winters Exponential Smoothing** | Bootstrapped residuals (500 draws) |
 | < 12 months | **3-month rolling mean** | No interval (state explicitly: "indicative only") |
 
@@ -83,11 +83,50 @@ is still accruing, so it is reported as an actual but never fitted.
 
 ---
 
-### Method: Prophet (>= 24 months)
+### Method: Trailing 12-month average (>= 24 months)
 
-**What it does:** Decomposes time series into trend + residuals. Produces probabilistic forecasts with uncertainty intervals via posterior sampling.
+**What it does:** Sets every future month to the mean of the last 12 observed
+months, and derives intervals by resampling the residuals of those 12 months
+around that level. It is deliberately a flat forecast: it carries no trend or
+seasonal term.
 
-**Configuration** (empirically calibrated via `run_seasonality_battery`; 1/5 tests positive, and the only positive test is ACF(12) on an undetrended series; STL strength is 0.07, negligible):
+**Why this method:** A rolling-origin backtest over the same history compared
+this average with fitted alternatives (exponential smoothing, ARIMA, Theta,
+decomposition, gradient boosting, Prophet) and no method beat it on held-out
+origins. It is also the simplest option, so it is what ships.
+
+**Point forecast:**
+
+```python
+from src.analysis.forecast_backtest import trailing_mean
+point = trailing_mean(monthly_values, window=12)   # mean of the last 12 months
+```
+
+The same helper backs the baseline used in the backtest, so the shipped
+forecast and the baseline cannot diverge.
+
+**Intervals:** the residuals of the trailing window are resampled with a fixed
+seed; the 10/90 and 2.5/97.5 percentiles give the 80% and 95% bands, and the
+cumulative bands are percentiles of the summed simulated paths. These are the
+model's own intervals. Step 8b of the pipeline replaces them with
+backtest-derived bands as soon as at least 10 rolling origins exist, so the
+`interval_method` column reads `empirical_backtest_nN` in a normal run.
+
+**Assumptions (must be stated):**
+1. The recent 12-month level persists over the forecast window
+2. No trend or seasonal pattern is worth modelling separately
+3. No structural breaks in the forecast period
+
+---
+
+### Method: Prophet (category forecasts)
+
+Prophet remains the model for **category-level** forecasts
+(`src/analysis/category_prophet.py`), where a per-category trend and yearly
+shape are the point of the exercise. It is no longer used for the total
+savings/cash-flow line.
+
+Tuned parameters shared by every Prophet fit (from `build_prophet_model`):
 
 ```python
 from prophet import Prophet
@@ -96,7 +135,7 @@ import pandas as pd
 
 def forecast_prophet(monthly_cashflow: pd.DataFrame, periods: int = 12) -> pd.DataFrame:
     """
-    Forecast monthly net cash flow using Prophet.
+    Forecast a monthly category total using Prophet.
 
     Parameters
     ----------
@@ -115,8 +154,8 @@ def forecast_prophet(monthly_cashflow: pd.DataFrame, periods: int = 12) -> pd.Da
                             interval_method, method.
     """
     # Parameter rationale:
-    #   yearly_seasonality=False  — 1/5 seasonality tests positive; STL strength 0.07
-    #   seasonality_mode="additive" — no amplitude/level scaling (Spearman ρ<0.5)
+    #   yearly_seasonality=False  — seasonality tests are mostly negative on monthly cash flow
+    #   seasonality_mode="additive" — no amplitude/level scaling
     #   seasonality_prior_scale=1.0 — tighter than default 10.0; prevents fitting noise
     #   changepoint_prior_scale=0.1 — more trend flexibility than default 0.05 to
     #                                  capture structural breaks (new job, rent changes)
@@ -167,8 +206,8 @@ def forecast_prophet(monthly_cashflow: pd.DataFrame, periods: int = 12) -> pd.Da
     return result.reset_index(drop=True)
 ```
 
-**Assumptions (must be stated):**
-1. Income sources remain approximately stable
+**Assumptions for the category Prophet fits (must be stated):**
+1. A category's recent income/spend pattern is approximately stable
 2. No major one-off events (job loss, inheritance, etc.)
 3. Spending patterns continue current trajectory
 4. No structural breaks in the forecast period
@@ -177,16 +216,19 @@ def forecast_prophet(monthly_cashflow: pd.DataFrame, periods: int = 12) -> pd.Da
 
 ### Backtest and Empirical Bands
 
-The model's own intervals were badly calibrated in practice: the Prophet 80%
-monthly band covered 0.28 of realised outcomes on 17 rolling origins. The
-pipeline therefore replaces them with bands estimated from the backtest.
+The pipeline replays the shipped forecaster over historical cut-offs and
+replaces its own intervals with bands estimated from those errors. A model's
+self-reported interval is not evidence that it covers reality.
 
 **Rolling-origin backtest** (`src/analysis/forecast_backtest.py`):
 
 - Origins start at 36 complete months and step by 3, each forecasting 24 months.
-- The same procedure is replayed for a naive trailing-12-month mean.
+- Only the shipped forecaster is replayed. Since the shipped method is itself
+  the trailing 12-month average, replaying a separate naive arm would duplicate
+  it, so the backtest's purpose here is the bands and the reported error.
 - Output (`forecast_backtest.parquet`): one row per origin × horizon step with
-  `actual`, `point`, `cum_actual`, `cum_point`, `ci80_lower`, `ci80_upper`.
+  `actual`, `point`, `cum_actual`, `cum_point`, `ci80_lower`, `ci80_upper`, and
+  `forecaster` (always `shipped`).
 
 **Reported numbers** (`summarise_backtest`):
 
@@ -222,7 +264,7 @@ total." Do not present the model's raw intervals as calibrated.
 
 ### Method: Holt-Winters Exponential Smoothing (12–23 months)
 
-**What it does:** Captures level, trend, and seasonal components. More robust than Prophet with limited data.
+**What it does:** Captures level, trend, and seasonal components. Used for medium histories, where the trailing average has too few observations to be stable.
 
 ```python
 from statsmodels.tsa.holtwinters import ExponentialSmoothing
@@ -372,7 +414,7 @@ def compute_runway(
 
 ### Method: Same as Cash Flow
 
-Uses the same method selection logic (Prophet / Holt-Winters / rolling mean) based on months of history.
+Uses the same method selection logic (trailing 12-month average / Holt-Winters / rolling mean) based on months of history.
 
 **Additional decomposition (if investment accounts present):**
 
@@ -414,7 +456,7 @@ def decompose_networth_change(
 | Is category spend trending up? | OLS on a zero-filled grid, Newey-West HAC errors | 6 months | HAC slope CI |
 | Is a category seasonal? | Kruskal–Wallis on trend residuals, BH-adjusted | 24 months | N/A (test q-value) |
 | Category spend spiking? | — (consecutive-rise flag removed) | — | — |
-| 12-month cash flow forecast? | Prophet | 24 months | Backtest-derived bands (model intervals below 10 origins) |
+| 12-month cash flow forecast? | Trailing 12-month average | 24 months | Backtest-derived bands (residual bootstrap below 10 origins) |
 | 12-month cash flow forecast? | Holt-Winters | 12 months | Bootstrapped residuals |
 | 12-month cash flow forecast? | Rolling mean | < 12 months | None (state explicitly) |
 | Months of runway? | Cumulative sum under scenarios | Depends on forecast method | Cumulative quantiles per path |

@@ -33,6 +33,17 @@ logger = setup_logging(__name__)
 MIN_ORIGINS_FOR_BANDS = 10
 
 
+def trailing_mean(train: pd.Series, window: int = 12) -> float:
+    """
+    Mean of the last ``window`` observations (the whole series if shorter).
+
+    Shared by the naive baseline forecaster and the shipped >= 24-month method,
+    so the two cannot drift apart.
+    """
+    tail = train.iloc[-window:] if len(train) >= window else train
+    return float(tail.mean())
+
+
 def naive_mean_forecaster(train: pd.Series, periods: int) -> pd.DataFrame:
     """
     Forecast every future month as the trailing 12-month mean.
@@ -53,8 +64,7 @@ def naive_mean_forecaster(train: pd.Series, periods: int) -> pd.DataFrame:
         Columns: month, point_estimate, ci80_lower, ci80_upper,
         ci95_lower, ci95_upper, method.
     """
-    tail = train.iloc[-12:] if len(train) >= 12 else train
-    point = float(tail.mean())
+    point = trailing_mean(train)
     future_dates = pd.date_range(
         start=train.index[-1] + pd.DateOffset(months=1),
         periods=periods,

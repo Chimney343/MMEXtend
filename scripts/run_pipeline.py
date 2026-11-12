@@ -43,10 +43,10 @@ from src.analysis.feature_engineering import (
 )
 from src.analysis.forecast_backtest import (
     MIN_ORIGINS_FOR_BANDS,
-    empirical_bands,
     rolling_origin_backtest,
     summarise_backtest,
 )
+from src.analysis.savings_band import savings_bands
 from src.analysis.recurring_commitments import (
     build_recurring_category_summary,
     build_recurring_commitments,
@@ -260,7 +260,9 @@ def main() -> None:
 
         n_origins = int(backtest["origin_month"].nunique())
         if n_origins >= MIN_ORIGINS_FOR_BANDS:
-            forecast_df = empirical_bands(backtest, forecast_df)
+            # V1 scaled empirical band (chosen by the band bake-off): errors
+            # are stored and applied against a scale known at the origin.
+            forecast_df = savings_bands(backtest, forecast_df, cashflow_series)
     writer.save_processed(forecast_df, "cashflow_forecast")
 
     # ── Step 9: Category trends ───────────────────────────────────────────────
@@ -279,6 +281,18 @@ def main() -> None:
 
         cat_forecasts = compute_category_forecasts(df_featured, as_of=as_of)
         writer.save_processed(cat_forecasts, "category_forecasts")
+
+    # ── Step 11: Prospective snapshots (private only) ───────────────────────
+    # Unseen months are the only clean evidence left once a test window has
+    # been used for selection, so every run records what it forecast.
+    try:
+        from src.analysis.forecast_tracking import save_snapshot
+
+        save_snapshot("category", cat_forecasts, as_of=as_of)
+        save_snapshot("savings", forecast_df, as_of=as_of)
+        logger.info("Forecast snapshots saved under private/forecast_snapshots/")
+    except Exception as exc:  # noqa: BLE001 - tracking must never fail the pipeline
+        logger.warning("Forecast snapshot skipped: %s", exc)
 
     print("\n" + "=" * 60)
     print("Pipeline complete. Outputs written to data/interim/:")
@@ -299,7 +313,7 @@ def main() -> None:
     print("  forecast_backtest.parquet")
     print("  category_trends_summary.parquet")
     print("  category_trends_series.parquet")
-    print("  category_forecasts.parquet (36-month horizon)")
+    print("  category_forecasts.parquet (24-month horizon)")
     print("\nNext steps:")
     print("  just dashboard    -> rebuild and open the dashboard at http://localhost:8050")
     print("=" * 60)

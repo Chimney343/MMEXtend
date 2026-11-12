@@ -1,0 +1,263 @@
+meta:
+  experiment: category-forecast-bakeoff
+  plan: private/plans/category-forecast-bakeoff.md
+  started: '2026-11-11'
+  output_dir: private/experiments/category_forecast/2026-11-11
+  frozen: true
+  frozen_at: '2026-11-11T14:43:06Z'
+  # Timing outcomes live in the git-ignored private/experiments/.../timing.json:
+  # warm-up and the projected seconds are derived from this ledger's data and
+  # must not enter a tracked file. Only the decisions they produced are here.
+  timing_decision:
+    step: 1
+    drop_prophet_yearly: false
+  s2_table_sha256: 5ab3b06937bbe20fbf161449ebf063a80921a54fcded54cc282780c7ca8d81a5
+data:
+  featured: data/interim/transactions_featured.parquet
+  series_builder: build_category_monthly_series
+split:
+  initial: 36
+  step: 1
+  horizon_primary: 12
+  horizon_secondary: 24
+  test_fraction: 0.3333333333333333
+  min_months_for_forecast: 12
+bands:
+  alpha: 0.2
+  min_prior_errors: 8
+  pinball_taus:
+  - 0.1
+  - 0.9
+metrics:
+  mase_season: 12
+  primary_metric: AvgRelCum12
+decision:
+  relcum12_max: 1.0
+  parsimony_margin: 0.05
+  stratum_limit: 1.1
+  phantom_margin: 0.01
+  bias_margin: 0.02
+  band_coverage:
+  - 0.65
+  - 0.95
+  baselines:
+    denominator: naive_mean_12
+    bias_reference: naive_mean_12
+  complexity_order:
+  - - naive_mean_12
+  - - naive_mean_w
+  - - seasonal_naive
+  - - croston
+    - tsb
+  - - auto_ets
+    - theta
+  - - combo
+  - - class_selector
+  - - recurring_aware
+  - - prophet_shipped
+    - prophet_yearly
+  - - reconciled
+  - - global_lgbm
+  - - series_selector
+cost:
+  prophet_budget_seconds: 7200
+  tier12_budget_seconds: 14400
+  probe_pairs: 50
+  workers: 15
+arms:
+  zero:
+    variants:
+    - {}
+  naive_mean_12:
+    variants:
+    - {}
+  naive_mean_w:
+    variants:
+    - window: 6
+    - window: 12
+    - window: 24
+    - window: 36
+  seasonal_naive:
+    variants:
+    - {}
+  prophet_shipped:
+    variants:
+    - {}
+  prophet_yearly:
+    variants:
+    - {}
+  auto_ets:
+    variants:
+    - window: null
+    - window: 60
+    - window: 36
+  theta:
+    variants:
+    - window: null
+    - window: 60
+    - window: 36
+  croston:
+    variants:
+    - variant: classic
+      alpha: 0.05
+    - variant: classic
+      alpha: 0.1
+    - variant: classic
+      alpha: 0.2
+    - variant: classic
+      alpha: 0.3
+    - variant: sba
+      alpha: 0.05
+    - variant: sba
+      alpha: 0.1
+    - variant: sba
+      alpha: 0.2
+    - variant: sba
+      alpha: 0.3
+  tsb:
+    variants:
+    - alpha: 0.05
+      beta: 0.05
+    - alpha: 0.05
+      beta: 0.1
+    - alpha: 0.1
+      beta: 0.05
+    - alpha: 0.1
+      beta: 0.1
+    - alpha: 0.1
+      beta: 0.2
+    - alpha: 0.2
+      beta: 0.1
+    - alpha: 0.2
+      beta: 0.2
+    - alpha: 0.2
+      beta: 0.3
+    - alpha: 0.3
+      beta: 0.2
+    - alpha: 0.3
+      beta: 0.3
+  combo:
+    variants:
+    - {}
+  recurring_aware:
+    variants:
+    - {}
+  global_lgbm:
+    variants:
+    - objective: l2
+      num_leaves: 15
+      min_data_in_leaf: 20
+      n_estimators: 200
+      fourier_k: 1
+      scale: expanding
+    - objective: l2
+      num_leaves: 31
+      min_data_in_leaf: 50
+      n_estimators: 500
+      fourier_k: 1
+      scale: expanding
+    - objective: tweedie
+      tweedie_variance_power: 1.2
+      num_leaves: 15
+      min_data_in_leaf: 20
+      n_estimators: 200
+      fourier_k: 1
+      scale: trailing12
+    - objective: tweedie
+      tweedie_variance_power: 1.5
+      num_leaves: 31
+      min_data_in_leaf: 50
+      n_estimators: 500
+      fourier_k: 2
+      scale: trailing12
+  class_selector:
+    variants:
+    - {}
+  series_selector:
+    variants:
+    - {}
+  reconciled:
+    variants: []
+selection:
+  zero:
+    arm_id: zero
+    params: {}
+  naive_mean_12:
+    arm_id: naive_mean_12
+    params: {}
+  naive_mean_w:
+    arm_id: naive_mean_w
+    params:
+      window: 12
+  seasonal_naive:
+    arm_id: seasonal_naive
+    params: {}
+  prophet_shipped:
+    arm_id: prophet_shipped
+    params: {}
+  prophet_yearly:
+    arm_id: prophet_yearly
+    params: {}
+  auto_ets:
+    arm_id: auto_ets
+    params:
+      window: 60
+  theta:
+    arm_id: theta
+    params:
+      window: 60
+  croston:
+    arm_id: croston
+    params:
+      alpha: 0.3
+      variant: classic
+  tsb:
+    arm_id: tsb
+    params:
+      alpha: 0.2
+      beta: 0.3
+  combo:
+    arm_id: combo
+    params: {}
+  recurring_aware:
+    arm_id: recurring_aware
+    params: {}
+  global_lgbm:
+    arm_id: global_lgbm
+    params:
+      fourier_k: 2
+      min_data_in_leaf: 50
+      n_estimators: 500
+      num_leaves: 31
+      objective: tweedie
+      scale: trailing12
+      tweedie_variance_power: 1.5
+  class_selector:
+    arm_id: class_selector
+    params:
+      class_map:
+        smooth:
+          arm_id: croston
+          params:
+            alpha: 0.3
+            variant: classic
+        erratic:
+          arm_id: theta
+          params:
+            window: 60
+        intermittent:
+          arm_id: auto_ets
+          params:
+            window: 60
+        lumpy:
+          arm_id: naive_mean_w
+          params:
+            window: 12
+      default:
+        arm_id: naive_mean_12
+        params: {}
+  series_selector:
+    arm_id: series_selector
+    params:
+      table: private/experiments/category_forecast/2026-11-11/series_selection.json
+      sha256: 5ab3b06937bbe20fbf161449ebf063a80921a54fcded54cc282780c7ca8d81a5

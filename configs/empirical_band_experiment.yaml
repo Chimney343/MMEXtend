@@ -1,0 +1,53 @@
+meta:
+  experiment: empirical-band-bakeoff
+  plan: private/plans/category-forecast-bakeoff.md (band follow-up, Phase 5b)
+  output_dir: private/experiments/band_bakeoff/2026-11-11
+  frozen: true
+  frozen_at: '2026-11-12T05:40:17Z'
+  category_selection: K1
+  savings_selection: V2
+  category_reason: K1 selected on dev by the pre-registered coverage rule
+  savings_reason: V2 selected on dev by the pre-registered coverage rule
+bands:
+  alpha: 0.2
+  quantiles:
+  - 0.1
+  - 0.9
+  min_prior_errors: 8
+  window_months: 12
+  snap: 0.01
+  candidates:
+    categories:
+    - id: K0
+      scale_mode: origin12
+      pool: class
+    - id: K1
+      scale_mode: max_history
+      pool: class
+    - id: K2
+      scale_mode: max_history
+      pool: class_size_tercile
+    savings:
+    - id: V0
+      kind: shipped_backtest_quantiles
+    - id: V1
+      scale_mode: origin12
+      pool: own
+    - id: V2
+      scale_mode: origin12_std
+      pool: own
+split:
+  horizon_primary: 12
+  horizon_secondary: 24
+  category_test_fraction: 0.3333333333333333
+  savings_test_fraction: 0.3333333333333333
+rule:
+  target_coverage: 0.8
+  coverage_window:
+  - 0.65
+  - 0.95
+  tie_margin: 0.02
+  burn_in_origins: 12
+  category_guardrail:
+    stratum: top_size_tercile
+    min_coverage: 0.65

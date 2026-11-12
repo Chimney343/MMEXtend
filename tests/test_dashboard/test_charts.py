@@ -96,7 +96,9 @@ def test_plot_savings_fan_returns_figure_with_expected_traces():
     )
 
     assert isinstance(fig, go.Figure)
-    assert fig.layout.title.text == "Savings Forecast"
+    assert "Savings Forecast" in fig.layout.title.text
+    # The band is explicitly flagged as unvalidated while it is on probation.
+    assert "Range not yet validated" in fig.layout.title.text
     assert fig.layout.hovermode == "x unified"
     assert fig.layout.yaxis.tickformat == ",.0f"
 
@@ -234,7 +236,9 @@ def test_plot_savings_fan_has_no_caption_without_backtest_counts():
         horizon=3,
     )
 
-    assert fig.layout.title.text == "Savings Forecast"
+    assert "Savings Forecast" in fig.layout.title.text
+    # The band is explicitly flagged as unvalidated while it is on probation.
+    assert "Range not yet validated" in fig.layout.title.text
 
 
 def test_plot_savings_fan_labels_model_band_uncalibrated():

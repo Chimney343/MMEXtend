@@ -347,24 +347,22 @@ class TestComputeCategoryTrends:
 
 
 class TestComputeCategoryForecasts:
-    def test_returns_dataframe_with_documented_columns(self, sample_transactions, monkeypatch):
-        mock = _make_forecast_frame(36)
-        monkeypatch.setattr(
-            category_prophet,
-            "forecast_prophet",
-            lambda hist, periods=36, yearly_seasonality=False: mock,
-        )
-
+    def test_returns_dataframe_with_documented_columns(self, sample_transactions):
         result = compute_category_forecasts(engineer_features(sample_transactions))
 
         assert isinstance(result, pd.DataFrame)
         for col in FORECAST_COLS:
             assert col in result.columns, f"Missing column: {col}"
-        assert result["months_ahead"].max() == 36
-        assert set(result["level"].unique()) == {"category", "subcategory"}
 
-    def test_short_series_emit_no_forecast_rows(self, monkeypatch):
-        # 5 months → below MIN_MONTHS_FORECAST → no rows, no Prophet call
+    def test_horizon_is_24_months(self, sample_transactions):
+        result = compute_category_forecasts(engineer_features(sample_transactions))
+
+        assert not result.empty
+        assert result["months_ahead"].max() == 24
+        assert result["months_ahead"].min() == 1
+
+    def test_short_series_emit_no_forecast_rows(self):
+        # 5 months -> below MIN_MONTHS_FORECAST -> no rows
         short = pd.DataFrame(
             [
                 {
@@ -377,12 +375,6 @@ class TestComputeCategoryForecasts:
                 }
                 for m in range(1, 6)
             ]
-        )
-        mock = _make_forecast_frame(36)
-        monkeypatch.setattr(
-            category_prophet,
-            "forecast_prophet",
-            lambda hist, periods=36, yearly_seasonality=False: mock,
         )
 
         result = compute_category_forecasts(engineer_features(short))

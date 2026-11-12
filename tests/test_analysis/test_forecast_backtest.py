@@ -12,8 +12,8 @@ from src.analysis.forecast_backtest import (
 )
 
 
-def _series(n: int = 110) -> pd.Series:
-    idx = pd.date_range("2017-09-01", periods=n, freq="MS")
+def _series(n: int = 83) -> pd.Series:
+    idx = pd.date_range("2021-03-01", periods=n, freq="MS")
     return pd.Series(np.sin(np.arange(n) / 3.0) * 1000.0 + 2000.0, index=idx)
 
 

@@ -596,6 +596,14 @@ def plot_savings_fan(
         )
 
     title = "Savings Forecast"
+    # The savings band is not yet validated: the dev and test windows each hold
+    # only about two and a half independent years for a single series, which is
+    # too little to show the band is calibrated. Say so on the chart. No
+    # figure here may be data-derived.
+    if has_cum_band:
+        title += (
+            "<br><span style='font-size:12px;color:gray'>Range not yet validated</span>"
+        )
     caption = _backtest_bias_caption(forecast, horizon) if has_cum_band else None
     if caption:
         title += f"<br><span style='font-size:12px;color:gray'>{caption}</span>"

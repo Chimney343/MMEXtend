@@ -1,10 +1,15 @@
 """
-Per-category / per-subcategory trend and forecast analysis using Prophet.
+Per-category / per-subcategory trend and forecast analysis.
 
 Produces three long-format DataFrames consumed by the dashboard:
   - category_trends_summary  (one row per series, numeric trend breakdown)
   - category_trends_series   (monthly amount + in-sample Prophet trend line)
-  - category_forecasts       (36-month point estimate + CI per series)
+  - category_forecasts       (24-month point estimate + 80% band per series)
+
+The trend line is fitted with Prophet. The forecast does **not** use Prophet:
+it comes from the selected bake-off arm (``class_selector``) in
+``src.analysis.category_forecast_production``. Prophet remains a dependency for
+the trend line only.
 
 Flow types: ``expense`` == type "withdrawal", ``income`` == type "deposit".
 Transfers are excluded from both. Amounts are taken as ``abs(amount_pln)``
@@ -36,7 +41,7 @@ logger = setup_logging(__name__)
 
 MIN_MONTHS_TREND = 6
 MIN_MONTHS_FORECAST = 12
-FORECAST_PERIODS = 36
+FORECAST_PERIODS = 24
 
 _SUMMARY_COLUMNS = [
     "flow_type",
@@ -67,20 +72,10 @@ _SERIES_COLUMNS = [
     "trend",
 ]
 
-_FORECAST_COLUMNS = [
-    "flow_type",
-    "level",
-    "category",
-    "subcategory",
-    "months_ahead",
-    "month",
-    "point_estimate",
-    "ci80_lower",
-    "ci80_upper",
-    "ci95_lower",
-    "ci95_upper",
-    "method",
-]
+# ``category_forecasts`` carries the standard columns plus ``cum_point``,
+# ``cum_ci80_lower`` and ``cum_ci80_upper`` for the dashboard's fan chart. The
+# production builder in ``src.analysis.category_forecast_production`` owns the
+# full column list; it is the single source of truth for the schema.
 
 _INSUFFICIENT_METRICS = {
     "trend_start": float("nan"),
@@ -445,8 +440,16 @@ def compute_category_forecasts(
     as_of=None,
 ) -> pd.DataFrame:
     """
-    Precompute 36-month Prophet forecasts per category / subcategory × flow type.
+    Precompute 24-month category forecasts per category / subcategory x flow.
 
+    Uses the selected bake-off arm (``class_selector``), not Prophet. Each series
+    is classified on its full history with the frozen SBC thresholds, the frozen
+    class-to-method map picks the method, and ``ci80_*`` comes from the pooled
+    scaled empirical band built only from errors at earlier fully realised
+    origins. ``ci95_*`` stay null: that band was never tested.
+
+    The grid runs from each series' first non-zero month to the last complete
+    month, with trailing zeros, and every point and band value is clipped at 0.
     Series with fewer than ``MIN_MONTHS_FORECAST`` months emit no rows.
 
     Parameters
@@ -460,43 +463,15 @@ def compute_category_forecasts(
     -------
     pd.DataFrame
         Columns matching ``category_forecasts``, including ``months_ahead``
-        (1..36) so the dashboard can slice 1/2/3-year views from one fit.
+        (1..24), ``cum_point`` and ``cum_ci80_*`` so the dashboard can slice the
+        1-year and 2-year views from one forecast.
     """
-    monthly = build_category_monthly_series(df_featured, as_of=as_of)
+    from src.analysis.category_forecast_production import (
+        compute_category_forecast_rows,
+    )
 
-    records: list[dict] = []
-    for flow_type, level, category, subcategory, y in _iter_series(monthly):
-        y = _continuous_month_series(y)
-        fc = forecast_series(y, periods=FORECAST_PERIODS, min_months=MIN_MONTHS_FORECAST)
-        if fc is None:
-            continue
-
-        logger.info(
-            "Category forecasts: fitted %s/%s/%s (%d months)",
-            level,
-            category,
-            subcategory or "(all)",
-            len(y),
-        )
-
-        for i, row in fc.iterrows():
-            records.append(
-                {
-                    "flow_type": flow_type,
-                    "level": level,
-                    "category": category,
-                    "subcategory": subcategory,
-                    "months_ahead": int(i) + 1,
-                    "month": row["month"],
-                    "point_estimate": row["point_estimate"],
-                    "ci80_lower": row["ci80_lower"],
-                    "ci80_upper": row["ci80_upper"],
-                    "ci95_lower": row["ci95_lower"],
-                    "ci95_upper": row["ci95_upper"],
-                    "method": row["method"],
-                }
-            )
-
-    forecast_df = pd.DataFrame(records, columns=_FORECAST_COLUMNS)
+    forecast_df, _outcome = compute_category_forecast_rows(
+        df_featured, as_of=as_of, periods=FORECAST_PERIODS
+    )
     logger.info("Category forecasts: %d forecast rows", len(forecast_df))
     return forecast_df

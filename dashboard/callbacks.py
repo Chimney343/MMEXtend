@@ -1462,14 +1462,14 @@ def _build_cat_forecast_figures(series_df, forecast_df, category, subcategory, f
         empty = make_empty_figure(
             "Select a category to view its forecast.", title="Category Forecasts"
         )
-        return empty, empty, empty
+        return empty, empty
 
     selection = _select_category_series(series_df, category, subcategory, flow_type)
     sub_label = " (all subcategories)" if subcategory in (None, _ALL_SUBCATS) else f" — {subcategory}"
     base_title = f"{category}{sub_label} — {flow_type.title()} Forecast"
 
     figures = []
-    for horizon in (12, 24, 36):
+    for horizon in (12, 24):
         fc = None
         if forecast_df is not None:
             level = "subcategory" if subcategory not in (None, _ALL_SUBCATS) else "category"
@@ -1514,7 +1514,7 @@ def _cat_forecast_panel() -> html.Div:
     categories = sorted(forecast["category"].dropna().unique().tolist())
     initial_cat = categories[0] if categories else None
 
-    fig1, fig2, fig3 = _build_cat_forecast_figures(
+    fig1, fig2 = _build_cat_forecast_figures(
         series, forecast, initial_cat, _ALL_SUBCATS, "expense"
     )
 
@@ -1553,7 +1553,6 @@ def _cat_forecast_panel() -> html.Div:
             ),
             dcc.Graph(id="cat-forecast-1y", figure=fig1),
             dcc.Graph(id="cat-forecast-2y", figure=fig2),
-            dcc.Graph(id="cat-forecast-3y", figure=fig3),
         ]
     )
 
@@ -1573,7 +1572,6 @@ def update_cat_forecast_subcats(category, flow_type):
 @callback(
     Output("cat-forecast-1y", "figure"),
     Output("cat-forecast-2y", "figure"),
-    Output("cat-forecast-3y", "figure"),
     Input("cat-forecast-category", "value"),
     Input("cat-forecast-subcategory", "value"),
     Input("cat-forecast-type", "value"),
@@ -1584,7 +1582,7 @@ def update_cat_forecast_charts(category, subcategory, flow_type):
     series = load_parquet("processed", "category_trends_series")
     if forecast is None or series is None:
         empty = make_empty_figure("Category forecast data not found.", title="Category Forecasts")
-        return empty, empty, empty
+        return empty, empty
     return _build_cat_forecast_figures(series, forecast, category, subcategory, flow_type)
 
 

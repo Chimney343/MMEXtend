@@ -375,17 +375,17 @@ def test_cat_forecast_panel_contains_expected_ids(monkeypatch):
         "cat-forecast-subcategory",
         "cat-forecast-1y",
         "cat-forecast-2y",
-        "cat-forecast-3y",
     ):
         assert expected in component_ids, f"Missing id: {expected}"
+    assert "cat-forecast-3y" not in component_ids, "the 3-year view was removed"
 
 
-def test_update_cat_forecast_charts_returns_three_figures(monkeypatch):
+def test_update_cat_forecast_charts_returns_two_figures(monkeypatch):
     monkeypatch.setattr(callbacks, "load_parquet", _cat_load_parquet_mock)
 
     figs = callbacks.update_cat_forecast_charts("Food", "__ALL__", "expense")
 
-    assert len(figs) == 3
+    assert len(figs) == 2
     for fig in figs:
         assert fig is not None
 
@@ -395,7 +395,7 @@ def test_update_cat_forecast_charts_handles_missing_data(monkeypatch):
 
     figs = callbacks.update_cat_forecast_charts("Food", "__ALL__", "expense")
 
-    assert len(figs) == 3
+    assert len(figs) == 2
     for fig in figs:
         assert "Category forecast data not found" in fig.layout.annotations[0].text
 
